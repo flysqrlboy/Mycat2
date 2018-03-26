@@ -52,6 +52,7 @@ public class DirectPassthrouhCmd implements MySQLCommand {
 		session.clearReadWriteOpts();
 
 		session.getBackend((mysqlsession, sender, success, result) -> {
+
 			ProxyBuffer curBuffer = session.proxyBuffer;
 			// 切换 buffer 读写状态
 			curBuffer.flip();
@@ -63,10 +64,10 @@ public class DirectPassthrouhCmd implements MySQLCommand {
 				try {
 					mysqlsession.writeToChannel();
 				} catch (IOException e) {
-					session.closeBackendAndResponseError(mysqlsession,success,((ErrorPacket) result));
+					session.closeBackendAndResponseError(mysqlsession, success, ((ErrorPacket) result));
 				}
 			} else {
-				session.closeBackendAndResponseError(mysqlsession,success,((ErrorPacket) result));
+				session.closeBackendAndResponseError(mysqlsession, success, ((ErrorPacket) result));
 			}
 		});
 		return false;
@@ -84,7 +85,7 @@ public class DirectPassthrouhCmd implements MySQLCommand {
 		boolean nextReadFlag = false;
 		do {
 			// 进行报文的处理流程
-			nextReadFlag = session.currPkgProc.procssPkg(session);
+			nextReadFlag = session.getMycatSession().commandHandler.procss(session);
 		} while (nextReadFlag);
 
 		// 获取当前是否结束标识
@@ -149,7 +150,7 @@ public class DirectPassthrouhCmd implements MySQLCommand {
 	@Override
 	public void clearFrontResouces(MycatSession session, boolean sessionCLosed) {
 		if (sessionCLosed) {
-			session.bufPool.recycleBuf(session.getProxyBuffer().getBuffer());
+			session.recycleAllocedBuffer(session.getProxyBuffer());
 			session.unbindAllBackend();
 		}
 	}
@@ -157,7 +158,7 @@ public class DirectPassthrouhCmd implements MySQLCommand {
 	@Override
 	public void clearBackendResouces(MySQLSession mysqlSession, boolean sessionCLosed) {
 		if (sessionCLosed) {
-			mysqlSession.bufPool.recycleBuf(mysqlSession.getProxyBuffer().getBuffer());
+			mysqlSession.recycleAllocedBuffer(mysqlSession.getProxyBuffer());
 		}
 	}
 }
